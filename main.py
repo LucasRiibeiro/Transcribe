@@ -1,11 +1,11 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request
 import speech_recognition as sr
 from pydub import AudioSegment
 from functools import wraps
 import io
 import logging
-from datetime import datetime
 import os
+from datetime import datetime
 
 app = Flask(__name__)
 
@@ -17,7 +17,7 @@ logging.basicConfig(
 )
 
 # Define IP permitido diretamente
-ALLOWED_IPS = {"transcribe-8ia099ami-projetotranscrevers-projects.vercel.app"}
+ALLOWED_IPS = {"127.0.0.1"}
 
 logging.info(f"IPs permitidos: {ALLOWED_IPS}")
 
@@ -25,7 +25,7 @@ def check_ip(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         request_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
-        if not ALLOWED_IPS or request.host not in ALLOWED_IPS:
+        if not ALLOWED_IPS or request_ip not in ALLOWED_IPS:
             logging.warning(f"Tentativa de acesso não autorizada do IP: {request_ip}")
             return 'Acesso não autorizado', 403
         logging.info(f"Acesso autorizado do IP: {request_ip}")
@@ -52,33 +52,21 @@ def transcrever():
 
     if 'audio' not in request.files:
         logging.error(f"{request_time} - Nenhum arquivo de áudio enviado - IP: {request_ip}")
-        return jsonify({'erro': 'Nenhum arquivo de áudio enviado'}), 400
+        return 'Nenhum arquivo de áudio enviado', 400
 
     audio_file = request.files['audio']
     if not audio_file:
         logging.error(f"{request_time} - Arquivo de áudio inválido - IP: {request_ip}")
-        return jsonify({'erro': 'Arquivo de áudio inválido'}), 400
+        return 'Arquivo de áudio inválido', 400
 
     content_type = audio_file.content_type
-    filename = audio_file.filename
-    extension = os.path.splitext(filename)[1].lower()
-    logging.info(f"Content-Type: {content_type}, Filename: {filename}")
-
-    if extension in ['.ogg', '.mp3', '.wav']:
-        content_type = f'audio/{extension[1:]}'
-
-    supported_types = ['audio/wav', 'audio/ogg', 'audio/mp3']
-
-    if content_type not in supported_types:
+    if content_type not in ['audio/wav', 'audio/wave', 'audio/x-wav', 'audio/ogg', 'audio/mp3']:
         logging.error(f"{request_time} - Tipo de arquivo não suportado: {content_type} - IP: {request_ip}")
-        return jsonify({'erro': 'Apenas arquivos WAV, OGG e MP3 são permitidos'}), 400
+        return {'erro': 'Apenas arquivos WAV, OGG e MP3 são permitidos'}, 400
 
     try:
-        raw_data = audio_file.read()
-        audio_file.seek(0)
-
         if content_type in ['audio/ogg', 'audio/mp3']:
-            audio = AudioSegment.from_file(io.BytesIO(raw_data))
+            audio = AudioSegment.from_file(io.BytesIO(audio_file.read()), format=content_type.split('/')[1])
             audio = audio.set_frame_rate(16000).set_channels(1)
             wav_io = io.BytesIO()
             audio.export(wav_io, format='wav')
@@ -91,17 +79,17 @@ def transcrever():
             transcribed_text = recognizer.recognize_google(audio_data, language='pt-BR')
 
         logging.info(f"{request_time} - Transcrição bem-sucedida: {transcribed_text} - IP: {request_ip}")
-        return jsonify({'transcricao': transcribed_text}), 200
+        return transcribed_text, 200
 
     except sr.UnknownValueError:
         logging.error(f"{request_time} - Não foi possível reconhecer o áudio - IP: {request_ip}")
-        return jsonify({'erro': 'Não foi possível reconhecer o áudio'}), 400
+        return 'Não foi possível reconhecer o áudio', 400
     except sr.RequestError as e:
         logging.error(f"{request_time} - Erro ao se comunicar com o serviço de reconhecimento de fala: {e} - IP: {request_ip}")
-        return jsonify({'erro': 'Erro ao se comunicar com o serviço de reconhecimento de fala'}), 500
+        return 'Erro ao se comunicar com o serviço de reconhecimento de fala', 500
     except Exception as e:
         logging.error(f"{request_time} - Erro inesperado: {e} - IP: {request_ip}")
-        return jsonify({'erro': 'Erro interno no servidor'}), 500
+        return 'Erro interno no servidor', 500
 
-# O Vercel usa o app diretamente
-handler = app
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, debug=True)

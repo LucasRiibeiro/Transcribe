@@ -4,8 +4,8 @@ from pydub import AudioSegment
 from functools import wraps
 import io
 import logging
-import os
 from datetime import datetime
+import os
 
 app = Flask(__name__)
 
@@ -17,7 +17,7 @@ logging.basicConfig(
 )
 
 # Define IP permitido diretamente
-ALLOWED_IPS = {"127.0.0.1"}
+ALLOWED_IPS = {"https://transcribe-8ia099ami-projetotranscrevers-projects.vercel.app/"}
 
 logging.info(f"IPs permitidos: {ALLOWED_IPS}")
 
@@ -40,7 +40,7 @@ def log_request_info():
 @app.route('/', methods=['GET'])
 @check_ip
 def home():
-    return '<center><h1>[POST] /transcrever with "audio" form file (wav, ogg, mp3)</h1></center>'
+    return '<center><h1>[POST] /transcrever with "audio" form file (wav, ogg, mp3, octet-stream)</h1></center>'
 
 @app.route('/transcrever', methods=['POST'])
 @check_ip
@@ -60,13 +60,36 @@ def transcrever():
         return 'Arquivo de áudio inválido', 400
 
     content_type = audio_file.content_type
-    if content_type not in ['audio/wav', 'audio/wave', 'audio/x-wav', 'audio/ogg', 'audio/mp3']:
+    filename = audio_file.filename
+    extension = os.path.splitext(filename)[1].lower()
+    logging.info(f"Content-Type: {content_type}, Filename: {filename}")
+
+    # Ajustar content_type com base na extensão do arquivo
+    if extension == '.ogg':
+        content_type = 'audio/ogg'
+    elif extension == '.mp3':
+        content_type = 'audio/mp3'
+    elif extension == '.wav':
+        content_type = 'audio/wav'
+
+    supported_types = ['audio/wav', 'audio/wave', 'audio/x-wav', 'audio/ogg', 'audio/mp3']
+
+    if content_type not in supported_types:
         logging.error(f"{request_time} - Tipo de arquivo não suportado: {content_type} - IP: {request_ip}")
-        return {'erro': 'Apenas arquivos WAV, OGG e MP3 são permitidos'}, 400
+        return {'erro': 'Apenas arquivos WAV, OGG, MP3 e OCTET-STREAM são permitidos'}, 400
 
     try:
+        raw_data = audio_file.read()
+        audio_file.seek(0)  # Resetar o ponteiro do arquivo
+
         if content_type in ['audio/ogg', 'audio/mp3']:
-            audio = AudioSegment.from_file(io.BytesIO(audio_file.read()), format=content_type.split('/')[1])
+            try:
+                # Tentativa de detecção automática do formato
+                audio = AudioSegment.from_file(io.BytesIO(raw_data))
+            except Exception as e:
+                logging.error(f"{request_time} - Falha ao processar o áudio: {e} - IP: {request_ip}")
+                return 'Formato de áudio inválido ou não suportado', 400
+
             audio = audio.set_frame_rate(16000).set_channels(1)
             wav_io = io.BytesIO()
             audio.export(wav_io, format='wav')

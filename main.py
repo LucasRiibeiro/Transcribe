@@ -17,7 +17,7 @@ logging.basicConfig(
 )
 
 # Define IP permitido diretamente
-ALLOWED_IPS = {"127.0.0.1"}
+ALLOWED_IPS = {"https://transcribe-8ia099ami-projetotranscrevers-projects.vercel.app/"}
 
 logging.info(f"IPs permitidos: {ALLOWED_IPS}")
 

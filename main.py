@@ -16,19 +16,11 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S'
 )
 
-# Define IP permitido diretamente
-ALLOWED_IPS = {"https://transcribe-8ia099ami-projetotranscrevers-projects.vercel.app/"}
-
-logging.info(f"IPs permitidos: {ALLOWED_IPS}")
-
 def check_ip(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         request_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
-        if not ALLOWED_IPS or request_ip not in ALLOWED_IPS:
-            logging.warning(f"Tentativa de acesso não autorizada do IP: {request_ip}")
-            return 'Acesso não autorizado', 403
-        logging.info(f"Acesso autorizado do IP: {request_ip}")
+        logging.info(f"Acesso recebido do IP: {request_ip}")
         return f(*args, **kwargs)
     return decorated_function
 
@@ -64,7 +56,6 @@ def transcrever():
     extension = os.path.splitext(filename)[1].lower()
     logging.info(f"Content-Type: {content_type}, Filename: {filename}")
 
-    # Ajustar content_type com base na extensão do arquivo
     if extension == '.ogg':
         content_type = 'audio/ogg'
     elif extension == '.mp3':
@@ -84,7 +75,6 @@ def transcrever():
 
         if content_type in ['audio/ogg', 'audio/mp3']:
             try:
-                # Tentativa de detecção automática do formato
                 audio = AudioSegment.from_file(io.BytesIO(raw_data))
             except Exception as e:
                 logging.error(f"{request_time} - Falha ao processar o áudio: {e} - IP: {request_ip}")

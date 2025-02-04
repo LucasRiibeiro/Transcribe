@@ -1,6 +1,7 @@
 import os
-import io
+import subprocess
 import logging
+import io
 from datetime import datetime
 from flask import Flask, request
 import speech_recognition as sr
@@ -16,16 +17,31 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S'
 )
 
-# 🔹 Definir caminho local do FFmpeg
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-FFMPEG_PATH = os.path.join(BASE_DIR, 'ffmpeg', 'ffmpeg')
-FFPROBE_PATH = os.path.join(BASE_DIR, 'ffmpeg', 'ffprobe')
+# 🔹 Caminho do FFmpeg no Vercel
+FFMPEG_PATH = "/tmp/ffmpeg"
+FFPROBE_PATH = "/tmp/ffprobe"
+
+def download_ffmpeg():
+    """Baixa e instala o FFmpeg no ambiente Vercel."""
+    if not os.path.exists(FFMPEG_PATH):
+        logging.info("🔽 Baixando FFmpeg...")
+        subprocess.run(
+            "curl -L https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz | tar -xJf - --strip-components=1 -C /tmp",
+            shell=True, check=True
+        )
+        os.rename("/tmp/ffmpeg", FFMPEG_PATH)
+        os.rename("/tmp/ffprobe", FFPROBE_PATH)
+        os.chmod(FFMPEG_PATH, 0o755)
+        os.chmod(FFPROBE_PATH, 0o755)
+        logging.info("✅ FFmpeg instalado com sucesso!")
+
+# 🔹 Instalar FFmpeg automaticamente ao iniciar
+download_ffmpeg()
 
 # 🔹 Aplicar ao pydub
 AudioSegment.converter = FFMPEG_PATH
 AudioSegment.ffprobe = FFPROBE_PATH
 
-# 🔹 Middleware para logar IPs
 def check_ip(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -42,7 +58,7 @@ def log_request_info():
 @app.route('/', methods=['GET'])
 @check_ip
 def home():
-    return '<center><h1>[POST] /transcrever with "audio" form file (wav, ogg, mp3, octet-stream)</h1></center>'
+    return '<center><h1>[POST] /transcrever with "audio" form file (wav, ogg, mp3)</h1></center>'
 
 @app.route('/transcrever', methods=['POST'])
 @check_ip
@@ -77,7 +93,7 @@ def transcrever():
 
     if content_type not in supported_types:
         logging.error(f"{request_time} - Tipo de arquivo não suportado: {content_type} - IP: {request_ip}")
-        return {'erro': 'Apenas arquivos WAV, OGG, MP3 e OCTET-STREAM são permitidos'}, 400
+        return {'erro': 'Apenas arquivos WAV, OGG, MP3 são permitidos'}, 400
 
     try:
         raw_data = audio_file.read()
@@ -102,7 +118,7 @@ def transcrever():
             transcribed_text = recognizer.recognize_google(audio_data, language='pt-BR')
 
         logging.info(f"{request_time} - Transcrição bem-sucedida: {transcribed_text} - IP: {request_ip}")
-        return transcribed_text, 200
+        return {'transcricao': transcribed_text}, 200
 
     except sr.UnknownValueError:
         logging.error(f"{request_time} - Não foi possível reconhecer o áudio - IP: {request_ip}")

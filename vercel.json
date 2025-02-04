@@ -1,9 +1,23 @@
 {
-  "version": 2,
   "builds": [
-    { "src": "main.py", "use": "@vercel/python" }
+    {
+      "src": "main.py",
+      "use": "@vercel/python"
+    }
   ],
   "routes": [
-    { "src": "/.*", "dest": "main.py" }
-  ]
+    {
+      "src": "/.*",
+      "dest": "main.py"
+    }
+  ],
+  "functions": {
+    "api/*": {
+      "runtime": "python3.9"
+    }
+  },
+  "env": {
+    "FFMPEG_PATH": "/tmp/ffmpeg",
+    "FFPROBE_PATH": "/tmp/ffprobe"
+  }
 }

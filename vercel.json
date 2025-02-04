@@ -4,7 +4,6 @@
     { "src": "api/main.py", "use": "@vercel/python" }
   ],
   "routes": [
-    { "src": "/transcrever", "methods": ["POST"], "dest": "api/main.py" },
-    { "src": "/(.*)", "dest": "api/main.py" }
+    { "src": "/.*", "dest": "api/main.py" }
   ]
 }

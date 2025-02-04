@@ -1,21 +1,31 @@
+import os
+import io
+import logging
+from datetime import datetime
 from flask import Flask, request
 import speech_recognition as sr
 from pydub import AudioSegment
 from functools import wraps
-import io
-import logging
-from datetime import datetime
-import os
 
 app = Flask(__name__)
 
-# Configuração do logging
+# 🔹 Configuração do logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s [%(levelname)s] %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
 
+# 🔹 Definir caminho local do FFmpeg
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+FFMPEG_PATH = os.path.join(BASE_DIR, 'ffmpeg', 'ffmpeg')
+FFPROBE_PATH = os.path.join(BASE_DIR, 'ffmpeg', 'ffprobe')
+
+# 🔹 Aplicar ao pydub
+AudioSegment.converter = FFMPEG_PATH
+AudioSegment.ffprobe = FFPROBE_PATH
+
+# 🔹 Middleware para logar IPs
 def check_ip(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):

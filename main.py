@@ -32,7 +32,7 @@ def log_request_info():
 @app.route('/', methods=['GET'])
 @check_ip
 def home():
-    return '<center><h1>[POST] /transcrever with "audio" form file (wav, ogg, mp3, octet-stream)</h1></center>'
+    return '<center><h1>[POST] /transcrever with "audio" form file (wav, ogg, mp3, mpeg, octet-stream)</h1></center>'
 
 @app.route('/transcrever', methods=['POST'])
 @check_ip
@@ -62,18 +62,20 @@ def transcrever():
         content_type = 'audio/mp3'
     elif extension == '.wav':
         content_type = 'audio/wav'
+    elif extension == '.mpeg':
+        content_type = 'audio/mpeg'
 
-    supported_types = ['audio/wav', 'audio/wave', 'audio/x-wav', 'audio/ogg', 'audio/mp3']
+    supported_types = ['audio/wav', 'audio/wave', 'audio/x-wav', 'audio/ogg', 'audio/mp3', 'audio/mpeg']
 
     if content_type not in supported_types:
         logging.error(f"{request_time} - Tipo de arquivo não suportado: {content_type} - IP: {request_ip}")
-        return {'erro': 'Apenas arquivos WAV, OGG, MP3 e OCTET-STREAM são permitidos'}, 400
+        return {'erro': 'Apenas arquivos WAV, OGG, MP3, MPEG e OCTET-STREAM são permitidos'}, 400
 
     try:
         raw_data = audio_file.read()
         audio_file.seek(0)  # Resetar o ponteiro do arquivo
 
-        if content_type in ['audio/ogg', 'audio/mp3']:
+        if content_type in ['audio/ogg', 'audio/mp3', 'audio/mpeg']:
             try:
                 audio = AudioSegment.from_file(io.BytesIO(raw_data))
             except Exception as e:

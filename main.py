@@ -91,7 +91,12 @@ def transcrever():
         recognizer = sr.Recognizer()
         with sr.AudioFile(audio_file) as source:
             audio_data = recognizer.record(source)
-            transcribed_text = recognizer.recognize_google(audio_data, language='pt-BR')
+
+            # Aumenta o tempo limite para processar áudios grandes
+            transcribed_text = recognizer.recognize_google(audio_data, language='pt-BR', show_all=False)
+
+        # Limpa possíveis escapes Unicode
+        transcribed_text = transcribed_text.encode('utf-8').decode('utf-8')
 
         logging.info(f"{request_time} - Transcrição bem-sucedida: {transcribed_text} - IP: {request_ip}")
         return transcribed_text, 200

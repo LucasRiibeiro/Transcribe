@@ -6,6 +6,7 @@ import io
 import logging
 from datetime import datetime
 import os
+from deepmultilingualpunctuation import PunctuationModel
 
 app = Flask(__name__)
 
@@ -15,6 +16,9 @@ logging.basicConfig(
     format='%(asctime)s [%(levelname)s] %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
+
+# Carregar modelo de pontuação
+punctuation_model = PunctuationModel()
 
 def check_ip(f):
     @wraps(f)
@@ -73,7 +77,7 @@ def transcrever():
 
     try:
         raw_data = audio_file.read()
-        audio_file.seek(0)  # Resetar o ponteiro do arquivo
+        audio_file.seek(0)
 
         if content_type in ['audio/ogg', 'audio/mp3', 'audio/mpeg']:
             try:
@@ -91,15 +95,14 @@ def transcrever():
         recognizer = sr.Recognizer()
         with sr.AudioFile(audio_file) as source:
             audio_data = recognizer.record(source)
+            transcribed_text = recognizer.recognize_google(audio_data, language='pt-BR')
 
-            # Aumenta o tempo limite para processar áudios grandes
-            transcribed_text = recognizer.recognize_google(audio_data, language='pt-BR', show_all=False)
+        # Aplicar pontuação ao texto transcrito
+        punctuated_text = punctuation_model.restore_punctuation(transcribed_text)
+        formatted_text = punctuated_text.capitalize()
 
-        # Limpa possíveis escapes Unicode
-        transcribed_text = transcribed_text.encode('utf-8').decode('utf-8')
-
-        logging.info(f"{request_time} - Transcrição bem-sucedida: {transcribed_text} - IP: {request_ip}")
-        return transcribed_text, 200
+        logging.info(f"{request_time} - Transcrição bem-sucedida: {formatted_text} - IP: {request_ip}")
+        return formatted_text, 200
 
     except sr.UnknownValueError:
         logging.error(f"{request_time} - Não foi possível reconhecer o áudio - IP: {request_ip}")
@@ -113,3 +116,4 @@ def transcrever():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
+    

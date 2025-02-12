@@ -6,7 +6,6 @@ import io
 import logging
 from datetime import datetime
 import os
-from deepmultilingualpunctuation import PunctuationModel
 
 app = Flask(__name__)
 
@@ -16,9 +15,6 @@ logging.basicConfig(
     format='%(asctime)s [%(levelname)s] %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
-
-# Carregar modelo de pontuação
-punctuation_model = PunctuationModel()
 
 def check_ip(f):
     @wraps(f)
@@ -97,11 +93,8 @@ def transcrever():
             audio_data = recognizer.record(source)
             transcribed_text = recognizer.recognize_google(audio_data, language='pt-BR')
 
-        # Aplicar pontuação ao texto transcrito
-        punctuated_text = punctuation_model.restore_punctuation(transcribed_text)
-
-        logging.info(f"{request_time} - Transcrição bem-sucedida: {punctuated_text} - IP: {request_ip}")
-        return punctuated_text, 200
+        logging.info(f"{request_time} - Transcrição bem-sucedida: {transcribed_text} - IP: {request_ip}")
+        return transcribed_text, 200
 
     except sr.UnknownValueError:
         logging.error(f"{request_time} - Não foi possível reconhecer o áudio - IP: {request_ip}")

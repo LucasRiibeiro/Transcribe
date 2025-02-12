@@ -77,7 +77,7 @@ def transcrever():
 
     try:
         raw_data = audio_file.read()
-        audio_file.seek(0)
+        audio_file.seek(0)  # Resetar o ponteiro do arquivo
 
         if content_type in ['audio/ogg', 'audio/mp3', 'audio/mpeg']:
             try:
@@ -99,10 +99,9 @@ def transcrever():
 
         # Aplicar pontuação ao texto transcrito
         punctuated_text = punctuation_model.restore_punctuation(transcribed_text)
-        formatted_text = punctuated_text.capitalize()
 
-        logging.info(f"{request_time} - Transcrição bem-sucedida: {formatted_text} - IP: {request_ip}")
-        return formatted_text, 200
+        logging.info(f"{request_time} - Transcrição bem-sucedida: {punctuated_text} - IP: {request_ip}")
+        return punctuated_text, 200
 
     except sr.UnknownValueError:
         logging.error(f"{request_time} - Não foi possível reconhecer o áudio - IP: {request_ip}")
@@ -116,4 +115,3 @@ def transcrever():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
-    
